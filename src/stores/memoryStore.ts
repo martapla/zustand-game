@@ -1,85 +1,75 @@
+// src/stores/memoryStore.ts
 import { create } from "zustand"
-// import { useMemoryStore } from "@/stores/memoryStore"
-
 
 export type Card = {
   id: number
-  wordEs: string
-  wordDe: string
+  pairId: number
+  word: string
+  language: "es" | "de"
   flipped: boolean
   matched: boolean
 }
 
 type MemoryState = {
   cards: Card[]
-  flippedIds: number[]
   setCards: (pairs: { es: string; de: string }[]) => void
   flipCard: (id: number) => void
-  resetGame: () => void
 }
 
 export const useMemoryStore = create<MemoryState>((set, get) => ({
   cards: [],
-  flippedIds: [],
-
   setCards: (pairs) => {
-    const cards: Card[] = pairs.flatMap((pair, index) => [
+    const newCards = pairs.flatMap((pair, index): Card[]  => [
       {
         id: index * 2,
-        wordEs: pair.es,
-        wordDe: pair.de,
+        pairId: index,
+        word: pair.es,
+        language: "es",
         flipped: false,
         matched: false,
       },
       {
         id: index * 2 + 1,
-        wordEs: pair.es,
-        wordDe: pair.de,
+        pairId: index,
+        word: pair.de,
+        language: "de",
         flipped: false,
         matched: false,
       },
-    ])
+    ]).sort(() => Math.random() - 0.5)
 
-    const shuffled = cards.sort(() => Math.random() - 0.5)
-
-    set({ cards: shuffled, flippedIds: [] })
+    set({ cards: newCards })
   },
-
   flipCard: (id) => {
-    const { cards, flippedIds } = get()
+    const { cards } = get()
+    const flippedCards = cards.filter((card) => card.flipped && !card.matched)
+    const currentCard = cards.find((card) => card.id === id)
 
-    // Si ja hi ha 2 girades, no fer res
-    if (flippedIds.length === 2 || cards.find((c) => c.id === id)?.flipped) return
+    if (!currentCard || currentCard.flipped || currentCard.matched || flippedCards.length === 2) return
 
-    const newFlippedIds = [...flippedIds, id]
-    const newCards = cards.map((card) =>
+    const updatedCards = cards.map((card) =>
       card.id === id ? { ...card, flipped: true } : card
     )
 
-    set({ cards: newCards, flippedIds: newFlippedIds })
+    set({ cards: updatedCards })
 
-    if (newFlippedIds.length === 2) {
+    const newFlipped = flippedCards.concat({ ...currentCard, flipped: true })
+
+    if (newFlipped.length === 2) {
+      const [a, b] = newFlipped
+      const isMatch = a.pairId === b.pairId && a.language !== b.language
+
       setTimeout(() => {
-        const [first, second] = newFlippedIds.map((fid) => newCards.find((c) => c.id === fid)!)
-
-        const match =
-          first.wordEs === second.wordEs && first.id !== second.id
-
-        const updatedCards = newCards.map((card) => {
-          if (card.id === first.id || card.id === second.id) {
-            return match
-              ? { ...card, matched: true }
-              : { ...card, flipped: false }
-          }
-          return card
+        set({
+          cards: get().cards.map((card) =>
+            card.id === a.id || card.id === b.id
+              ? isMatch
+                ? { ...card, matched: true }
+                : { ...card, flipped: false }
+              : card
+          ),
         })
-
-        set({ cards: updatedCards, flippedIds: [] })
       }, 1000)
     }
-  },
-
-  resetGame: () => {
-    set({ cards: [], flippedIds: [] })
   },
 }))
