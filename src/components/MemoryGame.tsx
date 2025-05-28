@@ -1,4 +1,3 @@
-// src/components/MemoryGame.tsx
 import { useEffect } from "react"
 import { useMemoryStore } from "@/stores/memoryStore"
 import { Button } from "@/components/ui/button"

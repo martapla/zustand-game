@@ -1,4 +1,3 @@
-// src/stores/memoryStore.ts
 import { create } from "zustand"
 
 export type Card = {
